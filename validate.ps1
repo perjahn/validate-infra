@@ -95,6 +95,9 @@ function Validate-AzureResources($principals)
     $webApps = @($azureResources | % { $_.WebApps } | group "SubscriptionName","ResourceGroup","Name")
     Log ("Total insecure web apps: " + $webApps.Count)
 
+    $rules = @($azureResources | % { $_.SqlServerFirewallRules } | group "SubscriptionName","ResourceGroupName","ServerName","StartIpAddress","EndIpAddress","FirewallRuleName")
+    Log ("Total sqlserver firewall rules: " + $rules.Count)
+
 
     [string] $message = ""
 
@@ -123,6 +126,21 @@ function Validate-AzureResources($principals)
         }
     }
 
+    if ($webApps.Count -gt 0 -and $rules.Count -gt 0)
+    {
+        $message += "`n`n"
+    }
+
+    if ($rules.Count -gt 0)
+    {
+        $message += "The following " + $rules.Count + " sqlserver firewall rules exists."
+        $message += "`nSubscriptionName`tResourceGroupName`tServerName`tStartIpAddress`tEndIpAddress`tFirewallRuleName"
+        foreach ($rule in $rules | sort "Name")
+        {
+            $message += "`n" + $rule.Values[0] + "`t" + $rule.Values[1] + "`t" + $rule.Values[2] + "`t" + $rule.Values[3] + "`t" + $rule.Values[4] + "`t" + $rule.Values[5]
+        }
+    }
+
     return $message
 }
 
@@ -133,6 +151,7 @@ function Get-InsecureAzureResources()
 
     $allStorageAccounts = @()
     $allWebApps = @()
+    $allRules = @()
 
     foreach ($subscription in $subscriptions)
     {
@@ -153,17 +172,26 @@ function Get-InsecureAzureResources()
             $webApp | Add-Member NoteProperty "SubscriptionName" $subscriptionName
         }
         $allWebApps += $webApps
+
+        $rules= @(Get-SqlServerFirewallRules)
+        foreach ($rule in $rules)
+        {
+            $rule | Add-Member NoteProperty "SubscriptionName" $subscriptionName
+        }
+        $allRules += $rules
     }
 
     $azureResources = New-Object PSObject
     $azureResources | Add-Member NoteProperty "StorageAccounts" $allStorageAccounts
     $azureResources | Add-Member NoteProperty "WebApps" $allWebApps
+    $azureResources | Add-Member NoteProperty "SqlServerFirewallRules" $allRules
 
     return $azureResources
 }
 
 function Get-InsecureStorageAccounts()
 {
+    Log ("Retrieving storage accounts...") Magenta
     $storageAccounts = @(Get-AzStorageAccount)
     Log ("Got " + $storageAccounts.Count + " storage accounts.") Magenta
 
@@ -191,6 +219,7 @@ function Get-InsecureStorageAccounts()
 
 function Get-InsecureWebApps()
 {
+    Log ("Retrieving web apps...") Magenta
     $webApps = @(Get-AzWebApp)
     Log ("Got " + $webApps.Count + " web apps.") Magenta
 
@@ -214,6 +243,34 @@ function Get-InsecureWebApps()
     Log ("Insecure web apps: " + $insecureWebApps.Count) Magenta
 
     return $insecureWebApps
+}
+
+function Get-SqlServerFirewallRules()
+{
+    Log ("Retrieving sqlserver firewall rules...") Magenta
+    $rules = @(Get-AzSqlServer | Get-AzSqlServerFirewallRule | ? { $_ })
+    Log ("Got " + $rules.Count + " sqlserver firewall rules.") Magenta
+
+    if ($env:ExcludeSqlServerFirewallRules)
+    {
+        [string[]] $excludeSqlServerFirewallRules = $env:ExcludeSqlServerFirewallRules.Split(",")
+
+        $rules = @($rules | ? {
+            [string] $rule = $_.StartIpAddress + ":" + $_.EndIpAddress + ":" + $_.FirewallRuleName
+            if ($excludeSqlServerFirewallRules.Contains($rule))
+            {
+                Log ("Excluding: '" + $_.ServerName + "', '" + $_.StartIpAddress + "', '" + $_.EndIpAddress + "', '" + $_.FirewallRuleName + "'")
+                $false
+            }
+            else
+            {
+                $true
+            }})
+    }
+
+    Log ("SqlServer firewall rules: " + $rules.Count) Magenta
+
+    return $rules
 }
 
 function Send-Email([string] $subject, [string] $body)
