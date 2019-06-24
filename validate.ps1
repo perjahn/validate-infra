@@ -6,21 +6,25 @@ function Main()
     if (!$env:EmailReceiver)
     {
         Log ("Environment variable EmailReceiver not set!") Red
-        exit 1
     }
     if (!$env:EmailSender)
     {
         Log ("Environment variable EmailSender not set!") Red
-        exit 1
     }
     if (!$env:EmailUsername)
     {
         Log ("Environment variable EmailUsername not set!") Red
-        exit 1
     }
     if (!$env:EmailPassword)
     {
         Log ("Environment variable EmailPassword not set!") Red
+    }
+    if (!$env:EmailServer)
+    {
+        Log ("Environment variable EmailServer not set!") Red
+    }
+    if (!$env:EmailReceiver -or !$env:EmailSender -or !$env:EmailUsername -or !$env:EmailPassword -or !$env:EmailServer)
+    {
         exit 1
     }
 
@@ -279,7 +283,7 @@ function Send-Email([string] $subject, [string] $body)
     [string] $emailSender = $env:EmailSender
     [string] $emailUsername = $env:EmailUsername
     [string] $emailPassword = $env:EmailPassword
-    [string] $smtpServer = "smtp.gmail.com"
+    [string] $smtpServer = $env:EmailServer
 
     $ss = $emailPassword | ConvertTo-SecureString -Force -AsPlainText
     $creds = New-Object PSCredential -ArgumentList $emailUsername, $ss
