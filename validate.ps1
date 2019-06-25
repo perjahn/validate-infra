@@ -96,7 +96,7 @@ function Validate-AzureResources($principals)
     $storageAccounts = @($azureResources | % { $_.StorageAccounts } | group "SubscriptionName","ResourceGroupName","StorageAccountName")
     Log ("Total insecure storage accounts: " + $storageAccounts.Count)
 
-    $webApps = @($azureResources | % { $_.WebApps } | group "SubscriptionName","ResourceGroup","Name")
+    $webApps = @($azureResources | % { $_.WebApps } | group "SubscriptionName","ResourceGroup","Name","HttpsOnly","MinTlsVersion")
     Log ("Total insecure web apps: " + $webApps.Count)
 
     $rules = @($azureResources | % { $_.SqlServerFirewallRules } | group "SubscriptionName","ResourceGroupName","ServerName","StartIpAddress","EndIpAddress","FirewallRuleName")
@@ -111,7 +111,7 @@ function Validate-AzureResources($principals)
         $message += "`nSubscriptionName`tResourceGroupName`tStorageAccountName"
         foreach ($storageAccount in $storageAccounts | sort "Name")
         {
-            $message += "`n" + $storageAccount.Values[0] + "`t" + $storageAccount.Values[1] + "`t" + $storageAccount.Values[2]
+            $message += "`n" + ($storageAccount.Values -join "`t")
         }
     }
 
@@ -122,11 +122,11 @@ function Validate-AzureResources($principals)
 
     if ($webApps.Count -gt 0)
     {
-        $message += "The following " + $webApps.Count + " web apps allow unencrypted http."
-        $message += "`nSubscriptionName`tResourceGroupName`tWebAppName"
+        $message += "The following " + $webApps.Count + " web apps allow broken/unencrypted http."
+        $message += "`nSubscriptionName`tResourceGroupName`tWebAppName`tHttpsOnly`tMinTlsVersion"
         foreach ($webApp in $webApps | sort "Name")
         {
-            $message += "`n" + $webApp.Values[0] + "`t" + $webApp.Values[1] + "`t" + $webApp.Values[2]
+            $message += "`n" + ($webApp.Values -join "`t")
         }
     }
 
@@ -141,7 +141,7 @@ function Validate-AzureResources($principals)
         $message += "`nSubscriptionName`tResourceGroupName`tServerName`tStartIpAddress`tEndIpAddress`tFirewallRuleName"
         foreach ($rule in $rules | sort "Name")
         {
-            $message += "`n" + $rule.Values[0] + "`t" + $rule.Values[1] + "`t" + $rule.Values[2] + "`t" + $rule.Values[3] + "`t" + $rule.Values[4] + "`t" + $rule.Values[5]
+            $message += "`n" + ($rule.Values -join "`t")
         }
     }
 
@@ -227,7 +227,14 @@ function Get-InsecureWebApps()
     $webApps = @(Get-AzWebApp)
     Log ("Got " + $webApps.Count + " web apps.") Magenta
 
-    $insecureWebApps = @($webApps | ? { !$_.HttpsOnly })
+    foreach ($webApp in $webApps)
+    {
+        $minTlsVersion = (Get-AzResource -ResourceType "Microsoft.Web/sites/config" -ResourceGroupName $webApp.ResourceGroup -ResourceName ($webApp.Name + "/web") -ApiVersion "2018-02-01").Properties.minTlsVersion
+
+        $webApp | Add-Member NoteProperty "MinTlsVersion" $minTlsVersion
+    }
+
+    $insecureWebApps = @($webApps | ? { !$_.HttpsOnly -or $_.minTlsVersion -ne "1.2" })
 
     if ($env:ExcludeWebApps)
     {
