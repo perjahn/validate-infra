@@ -267,10 +267,10 @@ function Get-SqlServerFirewallRules()
         [string[]] $excludeSqlServerFirewallRules = $env:ExcludeSqlServerFirewallRules.Split(",")
 
         $rules = @($rules | ? {
-            [string] $rule = $_.StartIpAddress + ":" + $_.EndIpAddress + ":" + $_.FirewallRuleName
+            [string] $rule = $_.StartIpAddress + "-" + $_.EndIpAddress
             if ($excludeSqlServerFirewallRules.Contains($rule))
             {
-                Log ("Excluding: '" + $_.ServerName + "', '" + $_.StartIpAddress + "', '" + $_.EndIpAddress + "', '" + $_.FirewallRuleName + "'")
+                Log ("Excluding: '" + $_.ServerName + "', " + $_.StartIpAddress + "-" + $_.EndIpAddress + ", '" + $_.FirewallRuleName + "'")
                 $false
             }
             else
