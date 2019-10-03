@@ -266,17 +266,37 @@ function Get-SqlServerFirewallRules()
     {
         [string[]] $excludeSqlServerFirewallRules = $env:ExcludeSqlServerFirewallRules.Split(",")
 
-        $rules = @($rules | ? {
-            [string] $rule = $_.StartIpAddress + "-" + $_.EndIpAddress
-            if ($excludeSqlServerFirewallRules.Contains($rule))
+        $exclude = $excludeSqlServerFirewallRules | % {
+            [string[]] $tokens = $_.Split(":")
+            if ($tokens.Length -ne 3)
             {
-                Log ("Excluding: '" + $_.ServerName + "', " + $_.StartIpAddress + "-" + $_.EndIpAddress + ", '" + $_.FirewallRuleName + "'")
-                $false
+                Log ("Invalid sqlserver exclude rule: '" + $_ + "'") Yellow
+                return
             }
-            else
+            $o = New-Object PSObject
+            $o | Add-Member NoteProperty ResourceGroupName $tokens[0]
+            $o | Add-Member NoteProperty ServerName $tokens[1]
+            $o | Add-Member NoteProperty IPRange $tokens[2]
+            $o
+            }
+
+        $rules = @($rules | ? {
+            [string] $resourcegroupname = $_.ResourceGroupName
+            [string] $servername = $_.ServerName
+            [string] $iprange = $_.StartIpAddress + "-" + $_.EndIpAddress
+
+            if ($exclude | ? {
+                (!$_.ResourceGroupName -or $_.ResourceGroupName -eq $resourcegroupname) -and
+                (!$_.ServerName -or $_.ServerName -eq $servername) -and
+                (!$_.IPRange -or $_.IPRange -eq $iprange)
+                })
             {
-                $true
-            }})
+                Log ("Excluding: '" + $_.ResourceGroupName + "', '" + $_.ServerName + "', " + $_.StartIpAddress + "-" + $_.EndIpAddress + ", '" + $_.FirewallRuleName + "'")
+                return $false
+            }
+
+            return $true
+            })
     }
 
     Log ("SqlServer firewall rules: " + $rules.Count) Magenta
