@@ -29,11 +29,11 @@ function Main()
     }
 
 
-    if ($env:TenantIds -and $env:ClientIds -and $env:ClientSecrets)
+    if ($env:AzureTenantIds -and $env:AzureClientIds -and $env:AzureClientSecrets)
     {
-        [string[]] $tenantIds = $env:TenantIds.Split(",")
-        [string[]] $clientIds = $env:ClientIds.Split(",")
-        [string[]] $clientSecrets = $env:ClientSecrets.Split(",")
+        [string[]] $tenantIds = $env:AzureTenantIds.Split(",")
+        [string[]] $clientIds = $env:AzureClientIds.Split(",")
+        [string[]] $clientSecrets = $env:AzureClientSecrets.Split(",")
 
         [int] $principalCount = ($tenantIds.Count,$clientIds.Count,$clientSecrets.Count | measure -Minimum).Minimum
         Log ("Got " + $principalCount + " service principals.")
