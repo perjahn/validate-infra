@@ -264,7 +264,8 @@ function Get-SqlServerFirewallRules()
 
     if ($env:ExcludeSqlServerFirewallRules)
     {
-        [string[]] $excludeSqlServerFirewallRules = $env:ExcludeSqlServerFirewallRules.Split(",")
+        [char[]] $separators = ",", "`n", "`r"
+        [string[]] $excludeSqlServerFirewallRules = $env:ExcludeSqlServerFirewallRules.Split($separators, [StringSplitOptions]::RemoveEmptyEntries)
 
         $exclude = $excludeSqlServerFirewallRules | % {
             [string[]] $tokens = $_.Split(":")
