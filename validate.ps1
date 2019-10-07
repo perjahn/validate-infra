@@ -1,6 +1,8 @@
 Set-StrictMode -v latest
 $ErrorActionPreference = "Stop"
 
+[char[]] $environmentSeparators = ",", "`n", "`r"
+
 function Main()
 {
     if (!$env:EmailReceiver)
@@ -31,9 +33,9 @@ function Main()
 
     if ($env:AzureTenantIds -and $env:AzureClientIds -and $env:AzureClientSecrets)
     {
-        [string[]] $tenantIds = $env:AzureTenantIds.Split(",")
-        [string[]] $clientIds = $env:AzureClientIds.Split(",")
-        [string[]] $clientSecrets = $env:AzureClientSecrets.Split(",")
+        [string[]] $tenantIds = $env:AzureTenantIds.Split($environmentSeparators, [StringSplitOptions]::RemoveEmptyEntries)
+        [string[]] $clientIds = $env:AzureClientIds.Split($environmentSeparators, [StringSplitOptions]::RemoveEmptyEntries)
+        [string[]] $clientSecrets = $env:AzureClientSecrets.Split($environmentSeparators, [StringSplitOptions]::RemoveEmptyEntries)
 
         [int] $principalCount = ($tenantIds.Count,$clientIds.Count,$clientSecrets.Count | measure -Minimum).Minimum
         Log ("Got " + $principalCount + " service principals.")
@@ -203,7 +205,7 @@ function Get-InsecureStorageAccounts()
 
     if ($env:ExcludeStorageAccounts)
     {
-        [string[]] $excludeStorageAccounts = $env:ExcludeStorageAccounts.Split(",")
+        [string[]] $excludeStorageAccounts = $env:ExcludeStorageAccounts.Split($environmentSeparators, [StringSplitOptions]::RemoveEmptyEntries)
         $insecureStorageAccounts = @($insecureStorageAccounts | ? {
             if ($excludeStorageAccounts.Contains($_.StorageAccountName))
             {
@@ -238,7 +240,7 @@ function Get-InsecureWebApps()
 
     if ($env:ExcludeWebApps)
     {
-        [string[]] $excludeWebApps = $env:ExcludeWebApps.Split(",")
+        [string[]] $excludeWebApps = $env:ExcludeWebApps.Split($environmentSeparators, [StringSplitOptions]::RemoveEmptyEntries)
         $insecureWebApps = @($insecureWebApps | ? {
             if ($excludeWebApps.Contains($_.Name))
             {
@@ -264,8 +266,7 @@ function Get-SqlServerFirewallRules()
 
     if ($env:ExcludeSqlServerFirewallRules)
     {
-        [char[]] $separators = ",", "`n", "`r"
-        [string[]] $excludeSqlServerFirewallRules = $env:ExcludeSqlServerFirewallRules.Split($separators, [StringSplitOptions]::RemoveEmptyEntries)
+        [string[]] $excludeSqlServerFirewallRules = $env:ExcludeSqlServerFirewallRules.Split($environmentSeparators, [StringSplitOptions]::RemoveEmptyEntries)
 
         $exclude = $excludeSqlServerFirewallRules | % {
             [string[]] $tokens = $_.Split(":")
