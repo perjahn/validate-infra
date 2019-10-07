@@ -109,7 +109,7 @@ function Validate-AzureResources($principals)
     {
         $message += "The following " + $storageAccounts.Count + " storage accounts allow unencrypted http."
         $message += "`nSubscriptionName`tResourceGroupName`tStorageAccountName"
-        foreach ($storageAccount in $storageAccounts | sort "Name")
+        foreach ($storageAccount in $storageAccounts | Sort-Object "Name")
         {
             $message += "`n" + ($storageAccount.Values -join "`t")
         }
@@ -124,7 +124,7 @@ function Validate-AzureResources($principals)
     {
         $message += "The following " + $webApps.Count + " web apps allow broken/unencrypted http."
         $message += "`nSubscriptionName`tResourceGroupName`tWebAppName`tHttpsOnly`tMinTlsVersion"
-        foreach ($webApp in $webApps | sort "Name")
+        foreach ($webApp in $webApps | Sort-Object "Name")
         {
             $message += "`n" + ($webApp.Values -join "`t")
         }
@@ -139,7 +139,7 @@ function Validate-AzureResources($principals)
     {
         $message += "The following " + $rules.Count + " sqlserver firewall rules exists."
         $message += "`nSubscriptionName`tResourceGroupName`tServerName`tStartIpAddress`tEndIpAddress`tFirewallRuleName"
-        foreach ($rule in $rules | sort "Name")
+        foreach ($rule in $rules | Sort-Object "Name")
         {
             $message += "`n" + ($rule.Values -join "`t")
         }
@@ -150,7 +150,7 @@ function Validate-AzureResources($principals)
 
 function Get-InsecureAzureResources()
 {
-    $subscriptions = @(Get-AzSubscription | sort "Name")
+    $subscriptions = @(Get-AzSubscription | Sort-Object "Name")
     Log ("Got " + $subscriptions.Count + " subscriptions.")
 
     $allStorageAccounts = @()
